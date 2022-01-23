@@ -1,0 +1,5 @@
+<resources>
+	<string name="app_name">HomeWeather</string>
+    <string name="button_increment">Increment</string>
+    <string name="datasource">https://michelanders.nl/weather/indoor/current.json</string>
+</resources>
