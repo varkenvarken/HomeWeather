@@ -7,8 +7,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.util.Log
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
 import android.widget.BaseAdapter
 import android.widget.TextView
 import androidx.annotation.RequiresApi
@@ -32,6 +31,8 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+        setSupportActionBar(findViewById(R.id.thetoolbar))
 
         val fm: FragmentManager = supportFragmentManager
 
@@ -65,6 +66,54 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         )
 
         SingletonRequestQueue.getInstance(this).addToRequestQueue(jsonArrayRequest)
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        val inflater: MenuInflater = menuInflater
+        inflater.inflate(R.menu.app_menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+
+            // Check if user triggered a refresh:
+            R.id.menu_refresh -> {
+                Log.i("REFRESH", "Refresh menu item selected")
+                val jsonArrayRequest = JsonArrayRequest(
+                    Request.Method.GET, getString(R.string.datasource), null,
+                    Response.Listener { response ->
+                        Log.d("JSONARRAY RECEIVED", response.toString())
+                        var newPagerItems: MutableList<PagerItem> = mutableListOf()
+                        for (i in 0 until response.length()) {
+                            val roomitem = response.getJSONObject(i)
+                            Log.d("updateFromDownLoad", roomitem.toString())
+                            val name = roomitem.get("name").toString()
+                            val temperature = roomitem.get("temperature").toString().toFloat()
+                            val humidity = roomitem.get("humidity").toString().toFloat()
+                            val time = roomitem.get("time").toString()
+                            val newItem = pagerItems[i].copy(name = name, time = time, temperature = "%.1f".format(temperature), humidity = "%.0f".format(humidity))
+                            newPagerItems.add(newItem)
+                        }
+                        pagerAdapter.setItems(newPagerItems)
+                    },
+                    Response.ErrorListener { error ->
+                        // TODO: Handle error
+                        Log.d("JSONARRAY RECEIVED", error.toString())
+                    }
+                )
+
+                SingletonRequestQueue.getInstance(this).addToRequestQueue(jsonArrayRequest)
+                // Start the refresh background task.
+                // This method calls setRefreshing(false) when it's finished.
+                //myUpdateOperation()
+
+                return true
+            }
+        }
+
+        // User didn't trigger a refresh, let the superclass handle this action
+        return super.onOptionsItemSelected(item)
     }
 
     override fun onDestroy() {
