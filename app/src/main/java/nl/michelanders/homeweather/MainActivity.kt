@@ -13,6 +13,7 @@ import android.widget.TextView
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.FragmentManager
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.android.volley.Request
 import com.android.volley.Response
 import com.android.volley.toolbox.JsonArrayRequest
@@ -34,6 +35,16 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         setContentView(R.layout.activity_main)
         setSupportActionBar(findViewById(R.id.thetoolbar))
 
+        val swiperefreshlayout = (findViewById(R.id.swiperefresh)  as SwipeRefreshLayout)
+        swiperefreshlayout.setOnRefreshListener {
+            Log.i("SWIPE", "onRefresh called from SwipeRefreshLayout")
+
+            // This method performs the actual data-refresh operation.
+            // The method calls setRefreshing(false) when it's finished.
+            // myUpdateOperation()
+            swiperefreshlayout.setRefreshing(false)
+        }
+
         val fm: FragmentManager = supportFragmentManager
 
         pagerAdapter = PagerAdapter(this)
@@ -44,7 +55,7 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
 
         val jsonArrayRequest = JsonArrayRequest(
             Request.Method.GET, getString(R.string.datasource), null,
-            Response.Listener { response ->
+            { response ->
                 Log.d("JSONARRAY RECEIVED", response.toString())
                 var newPagerItems: MutableList<PagerItem> = mutableListOf()
                 for (i in 0 until response.length()) {
@@ -59,7 +70,7 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
                 }
                 pagerAdapter.setItems(newPagerItems)
             },
-            Response.ErrorListener { error ->
+            { error ->
                 // TODO: Handle error
                 Log.d("JSONARRAY RECEIVED", error.toString())
             }
@@ -82,7 +93,7 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
                 Log.i("REFRESH", "Refresh menu item selected")
                 val jsonArrayRequest = JsonArrayRequest(
                     Request.Method.GET, getString(R.string.datasource), null,
-                    Response.Listener { response ->
+                    { response ->
                         Log.d("JSONARRAY RECEIVED", response.toString())
                         var newPagerItems: MutableList<PagerItem> = mutableListOf()
                         for (i in 0 until response.length()) {
@@ -97,7 +108,7 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
                         }
                         pagerAdapter.setItems(newPagerItems)
                     },
-                    Response.ErrorListener { error ->
+                    { error ->
                         // TODO: Handle error
                         Log.d("JSONARRAY RECEIVED", error.toString())
                     }
