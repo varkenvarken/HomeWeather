@@ -37,64 +37,67 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         pagerItems = generatePagerItems()
         pagerAdapter.setItems(pagerItems)
 
-         val handler = Handler()
-        val runnable: Runnable = object : Runnable, DownloadCallback {
+        val handler = Handler()
+
+        val runnable: Runnable = object : Runnable {
             override fun run() {
-                val downloadTask = DownloadTask(this)
+                val downloadTask = DownloadTask(handler, this, object : DownloadCallback{
+                    override fun updateFromDownload(result: String?) {
+                        Log.d("updateFromDownLoad", result)
+                        if (result != null) {
+                            try {
+                                var jArray = JSONArray(result)
+                                Log.d("updateFromDownLoad", jArray.toString())
+                                var newPagerItems: MutableList<PagerItem> = mutableListOf()
+                                for (i in 0 until jArray.length()) {
+                                    val roomitem = jArray.getJSONObject(i)
+                                    Log.d("updateFromDownLoad", roomitem.toString())
+                                    val name = roomitem.get("name").toString()
+                                    val temperature = roomitem.get("temperature").toString().toFloat()
+                                    val humidity = roomitem.get("humidity").toString().toFloat()
+                                    val time = roomitem.get("time").toString()
+                                    val newItem = pagerItems[i].copy(name = name, time = time, temperature = "%.1f".format(temperature), humidity = "%.0f".format(humidity))
+                                    newPagerItems.add(newItem)
+                                }
+                                pagerAdapter.setItems(newPagerItems)
+                            } catch (e: JSONException) {
+                                Log.d("updateFromDownLoad", e.toString())
+                            }
+                        } else {
+                            Log.d("updateFromDownLoad", "received null result")
+                        }
+                        // handler.postDelayed(, 5000)
+                    }
+
+                    override fun getActiveNetworkInfo(): NetworkInfo {
+                        val connectivityManager =
+                            getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+                        return connectivityManager.activeNetworkInfo
+                    }
+
+                    override fun onProgressUpdate(progressCode: Int, percentComplete: Int) {
+                        when (progressCode) {
+                            DownloadCallback.Progress.ERROR -> {
+                            }
+                            DownloadCallback.Progress.CONNECT_SUCCESS -> {
+                            }
+                            DownloadCallback.Progress.GET_INPUT_STREAM_SUCCESS -> {
+                            }
+                            DownloadCallback.Progress.PROCESS_INPUT_STREAM_IN_PROGRESS -> {
+                            }
+                            DownloadCallback.Progress.PROCESS_INPUT_STREAM_SUCCESS -> {
+                            }
+                        }
+                    }
+
+                    override fun finishDownloading() {
+
+                    }
+                })
                 downloadTask.execute(getString(R.string.datasource))
             }
 
-            override fun updateFromDownload(result: String?) {
-                Log.d("updateFromDownLoad", result)
-                if (result != null) {
-                    try {
-                        var jArray = JSONArray(result)
-                        Log.d("updateFromDownLoad", jArray.toString())
-                        var newPagerItems: MutableList<PagerItem> = mutableListOf()
-                        for (i in 0 until jArray.length()) {
-                            val roomitem = jArray.getJSONObject(i)
-                            Log.d("updateFromDownLoad", roomitem.toString())
-                            val name = roomitem.get("name").toString()
-                            val temperature = roomitem.get("temperature").toString().toFloat()
-                            val humidity = roomitem.get("humidity").toString().toFloat()
-                            val time = roomitem.get("time").toString()
-                            val newItem = pagerItems[i].copy(name = name, time = time, temperature = "%.1f".format(temperature), humidity = "%.0f".format(humidity))
-                            newPagerItems.add(newItem)
-                        }
-                        pagerAdapter.setItems(newPagerItems)
-                    } catch (e: JSONException) {
-                        Log.d("updateFromDownLoad", e.toString())
-                    }
-                } else {
-                    Log.d("updateFromDownLoad", "received null result")
-                }
-                handler.postDelayed(this, 5000)
-            }
 
-            override fun getActiveNetworkInfo(): NetworkInfo {
-                val connectivityManager =
-                    getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
-                return connectivityManager.activeNetworkInfo
-            }
-
-            override fun onProgressUpdate(progressCode: Int, percentComplete: Int) {
-                when (progressCode) {
-                    DownloadCallback.Progress.ERROR -> {
-                    }
-                    DownloadCallback.Progress.CONNECT_SUCCESS -> {
-                    }
-                    DownloadCallback.Progress.GET_INPUT_STREAM_SUCCESS -> {
-                    }
-                    DownloadCallback.Progress.PROCESS_INPUT_STREAM_IN_PROGRESS -> {
-                    }
-                    DownloadCallback.Progress.PROCESS_INPUT_STREAM_SUCCESS -> {
-                    }
-                }
-            }
-
-            override fun finishDownloading() {
-
-            }
         }
         handler.postDelayed(runnable, 0)
     }
