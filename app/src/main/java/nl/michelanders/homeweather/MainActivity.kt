@@ -14,6 +14,10 @@ import android.widget.TextView
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.FragmentManager
+import com.android.volley.Request
+import com.android.volley.Response
+import com.android.volley.toolbox.JsonArrayRequest
+import com.android.volley.toolbox.JsonObjectRequest
 import kotlinx.android.synthetic.main.activity_main.*
 import org.json.JSONArray
 import org.json.JSONException
@@ -37,69 +41,30 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         pagerItems = generatePagerItems()
         pagerAdapter.setItems(pagerItems)
 
-        val handler = Handler()
-
-        val runnable: Runnable = object : Runnable {
-            override fun run() {
-                val downloadTask = DownloadTask(handler, this, object : DownloadCallback{
-                    override fun updateFromDownload(result: String?) {
-                        Log.d("updateFromDownLoad", result)
-                        if (result != null) {
-                            try {
-                                var jArray = JSONArray(result)
-                                Log.d("updateFromDownLoad", jArray.toString())
-                                var newPagerItems: MutableList<PagerItem> = mutableListOf()
-                                for (i in 0 until jArray.length()) {
-                                    val roomitem = jArray.getJSONObject(i)
-                                    Log.d("updateFromDownLoad", roomitem.toString())
-                                    val name = roomitem.get("name").toString()
-                                    val temperature = roomitem.get("temperature").toString().toFloat()
-                                    val humidity = roomitem.get("humidity").toString().toFloat()
-                                    val time = roomitem.get("time").toString()
-                                    val newItem = pagerItems[i].copy(name = name, time = time, temperature = "%.1f".format(temperature), humidity = "%.0f".format(humidity))
-                                    newPagerItems.add(newItem)
-                                }
-                                pagerAdapter.setItems(newPagerItems)
-                            } catch (e: JSONException) {
-                                Log.d("updateFromDownLoad", e.toString())
-                            }
-                        } else {
-                            Log.d("updateFromDownLoad", "received null result")
-                        }
-                        // handler.postDelayed(, 5000)
-                    }
-
-                    override fun getActiveNetworkInfo(): NetworkInfo {
-                        val connectivityManager =
-                            getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
-                        return connectivityManager.activeNetworkInfo
-                    }
-
-                    override fun onProgressUpdate(progressCode: Int, percentComplete: Int) {
-                        when (progressCode) {
-                            DownloadCallback.Progress.ERROR -> {
-                            }
-                            DownloadCallback.Progress.CONNECT_SUCCESS -> {
-                            }
-                            DownloadCallback.Progress.GET_INPUT_STREAM_SUCCESS -> {
-                            }
-                            DownloadCallback.Progress.PROCESS_INPUT_STREAM_IN_PROGRESS -> {
-                            }
-                            DownloadCallback.Progress.PROCESS_INPUT_STREAM_SUCCESS -> {
-                            }
-                        }
-                    }
-
-                    override fun finishDownloading() {
-
-                    }
-                })
-                downloadTask.execute(getString(R.string.datasource))
+        val jsonArrayRequest = JsonArrayRequest(
+            Request.Method.GET, getString(R.string.datasource), null,
+            Response.Listener { response ->
+                Log.d("JSONARRAY RECEIVED", response.toString())
+                var newPagerItems: MutableList<PagerItem> = mutableListOf()
+                for (i in 0 until response.length()) {
+                    val roomitem = response.getJSONObject(i)
+                    Log.d("updateFromDownLoad", roomitem.toString())
+                    val name = roomitem.get("name").toString()
+                    val temperature = roomitem.get("temperature").toString().toFloat()
+                    val humidity = roomitem.get("humidity").toString().toFloat()
+                    val time = roomitem.get("time").toString()
+                    val newItem = pagerItems[i].copy(name = name, time = time, temperature = "%.1f".format(temperature), humidity = "%.0f".format(humidity))
+                    newPagerItems.add(newItem)
+                }
+                pagerAdapter.setItems(newPagerItems)
+            },
+            Response.ErrorListener { error ->
+                // TODO: Handle error
+                Log.d("JSONARRAY RECEIVED", error.toString())
             }
+        )
 
-
-        }
-        handler.postDelayed(runnable, 0)
+        SingletonRequestQueue.getInstance(this).addToRequestQueue(jsonArrayRequest)
     }
 
     override fun onDestroy() {
