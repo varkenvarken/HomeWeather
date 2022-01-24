@@ -29,6 +29,21 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
     private lateinit var pagerAdapter: PagerAdapter
     private var pagerItems: MutableList<PagerItem> = mutableListOf()
 
+    fun updatePagerItems(response: JSONArray, pagerItems: MutableList<PagerItem> ): MutableList<PagerItem> {
+        var newPagerItems: MutableList<PagerItem> = mutableListOf()
+        for (i in 0 until response.length()) {
+            val roomitem = response.getJSONObject(i)
+            Log.d("updateFromDownLoad", roomitem.toString())
+            val name = roomitem.get("name").toString()
+            val temperature = roomitem.get("temperature").toString().toFloat()
+            val humidity = roomitem.get("humidity").toString().toFloat()
+            val time = roomitem.get("time").toString()
+            val newItem = pagerItems[i].copy(name = name, time = time, temperature = "%.1f".format(temperature), humidity = "%.0f".format(humidity))
+            newPagerItems.add(newItem)
+        }
+        return newPagerItems
+    }
+
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,10 +53,20 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         val swiperefreshlayout = (findViewById(R.id.swiperefresh)  as SwipeRefreshLayout)
         swiperefreshlayout.setOnRefreshListener {
             Log.i("SWIPE", "onRefresh called from SwipeRefreshLayout")
+            val jsonArrayRequest = JsonArrayRequest(
+                Request.Method.GET, getString(R.string.datasource), null,
+                { response ->
+                    Log.d("JSONARRAY RECEIVED", response.toString())
+                    pagerAdapter.setItems(updatePagerItems(response, pagerItems))
+                },
+                { error ->
+                    // TODO: Handle error
+                    Log.d("JSONARRAY RECEIVED", error.toString())
+                }
+            )
 
-            // This method performs the actual data-refresh operation.
-            // The method calls setRefreshing(false) when it's finished.
-            // myUpdateOperation()
+            SingletonRequestQueue.getInstance(this).addToRequestQueue(jsonArrayRequest)
+
             swiperefreshlayout.setRefreshing(false)
         }
 
@@ -53,22 +78,13 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         pagerItems = generatePagerItems()
         pagerAdapter.setItems(pagerItems)
 
+
+
         val jsonArrayRequest = JsonArrayRequest(
             Request.Method.GET, getString(R.string.datasource), null,
             { response ->
                 Log.d("JSONARRAY RECEIVED", response.toString())
-                var newPagerItems: MutableList<PagerItem> = mutableListOf()
-                for (i in 0 until response.length()) {
-                    val roomitem = response.getJSONObject(i)
-                    Log.d("updateFromDownLoad", roomitem.toString())
-                    val name = roomitem.get("name").toString()
-                    val temperature = roomitem.get("temperature").toString().toFloat()
-                    val humidity = roomitem.get("humidity").toString().toFloat()
-                    val time = roomitem.get("time").toString()
-                    val newItem = pagerItems[i].copy(name = name, time = time, temperature = "%.1f".format(temperature), humidity = "%.0f".format(humidity))
-                    newPagerItems.add(newItem)
-                }
-                pagerAdapter.setItems(newPagerItems)
+                pagerAdapter.setItems(updatePagerItems(response, pagerItems))
             },
             { error ->
                 // TODO: Handle error
@@ -95,18 +111,7 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
                     Request.Method.GET, getString(R.string.datasource), null,
                     { response ->
                         Log.d("JSONARRAY RECEIVED", response.toString())
-                        var newPagerItems: MutableList<PagerItem> = mutableListOf()
-                        for (i in 0 until response.length()) {
-                            val roomitem = response.getJSONObject(i)
-                            Log.d("updateFromDownLoad", roomitem.toString())
-                            val name = roomitem.get("name").toString()
-                            val temperature = roomitem.get("temperature").toString().toFloat()
-                            val humidity = roomitem.get("humidity").toString().toFloat()
-                            val time = roomitem.get("time").toString()
-                            val newItem = pagerItems[i].copy(name = name, time = time, temperature = "%.1f".format(temperature), humidity = "%.0f".format(humidity))
-                            newPagerItems.add(newItem)
-                        }
-                        pagerAdapter.setItems(newPagerItems)
+                        pagerAdapter.setItems(updatePagerItems(response, pagerItems))
                     },
                     { error ->
                         // TODO: Handle error

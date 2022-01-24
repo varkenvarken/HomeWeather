@@ -2,7 +2,9 @@ package nl.michelanders.homeweather
 
 // inspired by https://github.com/rmyhal/ViewPager2-DiffUtil
 
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.recyclerview.widget.DiffUtil
@@ -26,6 +28,7 @@ class PagerAdapter(private val activity: FragmentActivity) : FragmentStateAdapte
         return items.any { it.id == itemId }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onBindViewHolder(
         holder: FragmentViewHolder,
         position: Int,
