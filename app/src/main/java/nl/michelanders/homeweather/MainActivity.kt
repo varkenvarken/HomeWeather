@@ -1,36 +1,30 @@
 package nl.michelanders.homeweather
 
 
-import android.net.ConnectivityManager
-import android.net.NetworkInfo
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
 import android.util.Log
-import android.view.*
-import android.widget.BaseAdapter
-import android.widget.TextView
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.fragment.app.FragmentManager
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.android.volley.Request
-import com.android.volley.Response
 import com.android.volley.toolbox.JsonArrayRequest
-import com.android.volley.toolbox.JsonObjectRequest
 import kotlinx.android.synthetic.main.activity_main.*
 import org.json.JSONArray
-import org.json.JSONException
-import java.time.LocalDateTime
 
 
 class MainActivity : AppCompatActivity(R.layout.activity_main) {
 
+    val TAG = "MainActivityTask"
+
     private lateinit var pagerAdapter: PagerAdapter
     private var pagerItems: MutableList<PagerItem> = mutableListOf()
 
-    fun updatePagerItems(response: JSONArray, pagerItems: MutableList<PagerItem> ): MutableList<PagerItem> {
-        var newPagerItems: MutableList<PagerItem> = mutableListOf()
+    private fun updatePagerItems(response: JSONArray, pagerItems: MutableList<PagerItem> ): MutableList<PagerItem> {
+        val newPagerItems: MutableList<PagerItem> = mutableListOf()
         for (i in 0 until response.length()) {
             val roomitem = response.getJSONObject(i)
             Log.d("updateFromDownLoad", roomitem.toString())
@@ -50,48 +44,32 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         setContentView(R.layout.activity_main)
         setSupportActionBar(findViewById(R.id.thetoolbar))
 
-        val swiperefreshlayout = (findViewById(R.id.swiperefresh)  as SwipeRefreshLayout)
+        val swiperefreshlayout = (findViewById<SwipeRefreshLayout>(R.id.swiperefresh))
         swiperefreshlayout.setOnRefreshListener {
-            Log.i("SWIPE", "onRefresh called from SwipeRefreshLayout")
             val jsonArrayRequest = JsonArrayRequest(
                 Request.Method.GET, getString(R.string.datasource), null,
-                { response ->
-                    Log.d("JSONARRAY RECEIVED", response.toString())
-                    pagerAdapter.setItems(updatePagerItems(response, pagerItems))
-                },
-                { error ->
-                    // TODO: Handle error
-                    Log.d("JSONARRAY RECEIVED", error.toString())
-                }
+                { response -> pagerAdapter.setItems(updatePagerItems(response, pagerItems))},
+                { error -> Log.d("Swipe refresh", error.toString()) }
             )
-
+            jsonArrayRequest.tag = TAG
             SingletonRequestQueue.getInstance(this).addToRequestQueue(jsonArrayRequest)
-
-            swiperefreshlayout.setRefreshing(false)
+            swiperefreshlayout.isRefreshing = false
         }
 
-        val fm: FragmentManager = supportFragmentManager
+        // we don't use the fragment manager
+        // val fm: FragmentManager = supportFragmentManager
 
         pagerAdapter = PagerAdapter(this)
         viewPager.adapter = pagerAdapter
-
         pagerItems = generatePagerItems()
         pagerAdapter.setItems(pagerItems)
 
-
-
         val jsonArrayRequest = JsonArrayRequest(
             Request.Method.GET, getString(R.string.datasource), null,
-            { response ->
-                Log.d("JSONARRAY RECEIVED", response.toString())
-                pagerAdapter.setItems(updatePagerItems(response, pagerItems))
-            },
-            { error ->
-                // TODO: Handle error
-                Log.d("JSONARRAY RECEIVED", error.toString())
-            }
+            { response -> pagerAdapter.setItems(updatePagerItems(response, pagerItems))},
+            { error -> Log.d("On create", error.toString())}
         )
-
+        jsonArrayRequest.tag = TAG
         SingletonRequestQueue.getInstance(this).addToRequestQueue(jsonArrayRequest)
     }
 
@@ -103,37 +81,27 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
-
-            // Check if user triggered a refresh:
             R.id.menu_refresh -> {
-                Log.i("REFRESH", "Refresh menu item selected")
                 val jsonArrayRequest = JsonArrayRequest(
                     Request.Method.GET, getString(R.string.datasource), null,
-                    { response ->
-                        Log.d("JSONARRAY RECEIVED", response.toString())
-                        pagerAdapter.setItems(updatePagerItems(response, pagerItems))
-                    },
-                    { error ->
-                        // TODO: Handle error
-                        Log.d("JSONARRAY RECEIVED", error.toString())
-                    }
+                    { response -> pagerAdapter.setItems(updatePagerItems(response, pagerItems))},
+                    { error -> Log.d("Refresh menu item", error.toString())}
                 )
-
+                jsonArrayRequest.tag = TAG
                 SingletonRequestQueue.getInstance(this).addToRequestQueue(jsonArrayRequest)
-                // Start the refresh background task.
-                // This method calls setRefreshing(false) when it's finished.
-                //myUpdateOperation()
-
                 return true
             }
         }
-
-        // User didn't trigger a refresh, let the superclass handle this action
         return super.onOptionsItemSelected(item)
     }
 
+    override fun onStop() {
+        super.onStop()
+        SingletonRequestQueue.getInstance(this).cancelAll(TAG)
+    }
     override fun onDestroy() {
         viewPager.adapter = null
+        SingletonRequestQueue.getInstance(this).cancelAll(TAG)
         super.onDestroy()
     }
 

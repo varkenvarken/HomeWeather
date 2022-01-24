@@ -8,6 +8,11 @@ import com.android.volley.RequestQueue
 import com.android.volley.toolbox.ImageLoader
 import com.android.volley.toolbox.Volley
 
+/*
+Sample implementation of a singleton request queue with an image cache.
+See: https://developer.android.com/training/volley/requestqueue
+Note: we don't actaully need the image cache for this app.
+*/
 class SingletonRequestQueue constructor(context: Context) {
     companion object {
         @Volatile
@@ -38,5 +43,9 @@ class SingletonRequestQueue constructor(context: Context) {
     }
     fun <T> addToRequestQueue(req: Request<T>) {
         requestQueue.add(req)
+    }
+
+    fun cancelAll(tag: String) {
+        requestQueue.cancelAll(tag)
     }
 }
