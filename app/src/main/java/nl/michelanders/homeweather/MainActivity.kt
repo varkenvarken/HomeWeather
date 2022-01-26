@@ -7,6 +7,7 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
+import android.view.View
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
@@ -63,6 +64,21 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         viewPager.adapter = pagerAdapter
         pagerItems = generatePagerItems()
         pagerAdapter.setItems(pagerItems)
+
+        imageButtonLeft.setOnClickListener(object : View.OnClickListener {
+            override fun onClick(v: View?) {
+                var tab = viewPager.currentItem - 1
+                if (tab < 0) { tab = pagerAdapter.itemCount - 1 }
+                viewPager.currentItem = tab
+            }
+        })
+        imageButtonRight.setOnClickListener(object : View.OnClickListener {
+            override fun onClick(v: View?) {
+                var tab = viewPager.currentItem + 1
+                if(tab >= pagerAdapter.itemCount){ tab = 0 }
+                viewPager.currentItem = tab
+            }
+        })
 
         val jsonArrayRequest = JsonArrayRequest(
             Request.Method.GET, getString(R.string.datasource), null,
