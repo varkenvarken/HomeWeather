@@ -47,7 +47,6 @@
         app:layout_constraintTop_toBottomOf="@+id/txtTemperature" />
 
     <TextView
-        android:id="@+id/textView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="°"
@@ -57,7 +56,6 @@
         app:layout_constraintTop_toTopOf="@+id/txtTemperature" />
 
     <TextView
-        android:id="@+id/textView2"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="%"
