@@ -40,7 +40,9 @@ class PagerAdapter(private val activity: FragmentActivity) : FragmentStateAdapte
             // safe check ,but fragment should not be null
             Log.d("onBindViewHolder",items[position].time)
             if (fragment != null) {
-                (fragment as PagerFragment).setValue(items[position].name, items[position].time, items[position].temperature, items[position].humidity)
+                (fragment as PagerFragment).setValue(items[position].name, items[position].time,
+                    items[position].temperature, items[position].humidity,
+                    items[position].windrose, items[position].beaufort, items[position].windspeed, items[position].windgust)
             } else {
                 super.onBindViewHolder(holder, position, payloads)
             }

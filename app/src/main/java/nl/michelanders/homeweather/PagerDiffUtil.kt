@@ -20,7 +20,11 @@ class PagerDiffUtil(private val oldList: List<PagerItem>, private val newList: L
         return ( (oldList[oldItemPosition].name == newList[newItemPosition].name)
                 && (oldList[oldItemPosition].time == newList[newItemPosition].time)
                 && (oldList[oldItemPosition].temperature == newList[newItemPosition].temperature)
-                && (oldList[oldItemPosition].humidity == newList[newItemPosition].humidity))
+                && (oldList[oldItemPosition].humidity == newList[newItemPosition].humidity)
+                && (oldList[oldItemPosition].beaufort == newList[newItemPosition].beaufort)
+                && (oldList[oldItemPosition].windrose == newList[newItemPosition].windrose)
+                && (oldList[oldItemPosition].windspeed == newList[newItemPosition].windspeed)
+                && (oldList[oldItemPosition].windgust == newList[newItemPosition].windgust))
     }
 
     override fun getChangePayload(oldItemPosition: Int, newItemPosition: Int): Any? {

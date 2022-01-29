@@ -33,7 +33,13 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
             val temperature = roomitem.get("temperature").toString().toFloat()
             val humidity = roomitem.get("humidity").toString().toFloat()
             val time = roomitem.get("time").toString()
-            val newItem = pagerItems[i].copy(name = name, time = time, temperature = "%.1f".format(temperature), humidity = "%.0f".format(humidity))
+            val windrose = if(roomitem.has("windrose")){roomitem.getString("windrose")}else{null}
+            val beaufort = if(roomitem.has("beaufort")){roomitem.getString("beaufort")}else{null}
+            val windspeed = if(roomitem.has("windspeed")){roomitem.getString("windspeed")}else{null}
+            val windgust = if(roomitem.has("windgust")){roomitem.getString("windgust")}else{null}
+            val newItem = pagerItems[i].copy(name = name, time = time,
+                temperature = "%.1f".format(temperature), humidity = "%.0f".format(humidity),
+                windrose = windrose, beaufort = beaufort, windspeed = windspeed, windgust = windgust)
             newPagerItems.add(newItem)
         }
         return newPagerItems
@@ -125,7 +131,7 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
     private fun generatePagerItems(): MutableList<PagerItem> {
         return (1..ITEMS_COUNT).map {
             val color = if (it < colors.size) it else it % colors.size
-                PagerItem(color=colors[color])
+                PagerItem(color =colors[color])
         }.toMutableList()
     }
 
