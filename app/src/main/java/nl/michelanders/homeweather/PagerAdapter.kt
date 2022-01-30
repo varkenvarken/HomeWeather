@@ -42,7 +42,8 @@ class PagerAdapter(private val activity: FragmentActivity) : FragmentStateAdapte
             if (fragment != null) {
                 (fragment as PagerFragment).setValue(items[position].name, items[position].time,
                     items[position].temperature, items[position].humidity,
-                    items[position].windrose, items[position].beaufort, items[position].windspeed, items[position].windgust)
+                    items[position].windrose, items[position].beaufort, items[position].windspeed, items[position].windgust,
+                    items[position].rain8h, items[position].rainrate)
             } else {
                 super.onBindViewHolder(holder, position, payloads)
             }

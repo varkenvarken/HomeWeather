@@ -1,6 +1,10 @@
 package nl.michelanders.homeweather
 
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
@@ -15,11 +19,12 @@ import com.android.volley.Request
 import com.android.volley.toolbox.JsonArrayRequest
 import kotlinx.android.synthetic.main.activity_main.*
 import org.json.JSONArray
-
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 
 class MainActivity : AppCompatActivity(R.layout.activity_main) {
 
-    val TAG = "MainActivityTask"
+    private val TAG = "MainActivityTask"
 
     private lateinit var pagerAdapter: PagerAdapter
     private var pagerItems: MutableList<PagerItem> = mutableListOf()
@@ -37,9 +42,12 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
             val beaufort = if(roomitem.has("beaufort")){roomitem.getString("beaufort")}else{null}
             val windspeed = if(roomitem.has("windspeed")){roomitem.getString("windspeed")}else{null}
             val windgust = if(roomitem.has("windgust")){roomitem.getString("windgust")}else{null}
+            val rain8h = if(roomitem.has("rain8h")){roomitem.getString("rain8h")}else{null}
+            val rainrate = if(roomitem.has("rainRate")){roomitem.getString("rainRate")}else{null}
             val newItem = pagerItems[i].copy(name = name, time = time,
                 temperature = "%.1f".format(temperature), humidity = "%.0f".format(humidity),
-                windrose = windrose, beaufort = beaufort, windspeed = windspeed, windgust = windgust)
+                windrose = windrose, beaufort = beaufort, windspeed = windspeed, windgust = windgust,
+                rain8h = rain8h, rainrate = rainrate)
             newPagerItems.add(newItem)
         }
         return newPagerItems
@@ -117,6 +125,50 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         return super.onOptionsItemSelected(item)
     }
 
+    var ticks = 0
+    val br: BroadcastReceiver = MyBroadcastReceiver()
+    val filter = IntentFilter(Intent.ACTION_TIME_TICK)
+
+
+    inner class MyBroadcastReceiver : BroadcastReceiver() {
+        override fun onReceive(context: Context?, p1: Intent?) {
+            Log.d("Broadcast", p1.toString())
+            val connectivityManager =
+                context?.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            var notMetered: Boolean = false
+            connectivityManager.allNetworks.forEach { network ->
+                connectivityManager.getNetworkCapabilities(network).apply {
+                    if (hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)) {
+                        notMetered = true
+                    }
+                }
+            }
+            Log.d("Broadcast", "Not metered: $notMetered")
+            ticks++
+            if(notMetered or (ticks%5 == 0)){
+                Log.d("Broadcast", "reloading data. ticks= "+ticks)
+                val jsonArrayRequest = JsonArrayRequest(
+                    Request.Method.GET, getString(R.string.datasource), null,
+                    { response -> pagerAdapter.setItems(updatePagerItems(response, pagerItems))},
+                    { error -> Log.d("Automatic reload failed", error.toString())}
+                )
+                jsonArrayRequest.tag = TAG
+                SingletonRequestQueue.getInstance(context).addToRequestQueue(jsonArrayRequest)
+            }
+        }
+    }
+
+
+    override fun onResume() {
+        super.onResume()
+        ticks = 0
+        registerReceiver(br, filter)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        unregisterReceiver(br)
+    }
     override fun onStop() {
         super.onStop()
         SingletonRequestQueue.getInstance(this).cancelAll(TAG)
@@ -148,3 +200,5 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         )
     }
 }
+
+

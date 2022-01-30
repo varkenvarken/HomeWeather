@@ -1,5 +1,6 @@
 package nl.michelanders.homeweather
 
+import android.content.Context
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -7,6 +8,7 @@ import android.util.Log
 import android.view.View
 import android.widget.ImageView
 import androidx.annotation.RequiresApi
+import androidx.appcompat.content.res.AppCompatResources.getDrawable
 import androidx.fragment.app.Fragment
 import nl.michelanders.homeweather.R
 import kotlinx.android.synthetic.main.fragment_pager.*
@@ -32,13 +34,16 @@ class PagerFragment : Fragment(R.layout.fragment_pager) {
             args.getString(EXTRA_WINDROSE),
             args.getString(EXTRA_BEAUFORT),
             args.getString(EXTRA_WINDSPEED),
-            args.getString(EXTRA_WINDGUST))
+            args.getString(EXTRA_WINDGUST),
+            args.getString(EXTRA_RAIN8H),
+            args.getString(EXTRA_RAINRATE))
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun setValue(newName: String?, newTime: String?,
                  newTemperature: String?, newHumidity: String?,
-                 newWindrose: String?, newBeaufort:String?, newWindspeed:String?, newWindgust:String?) {
+                 newWindrose: String?, newBeaufort:String?, newWindspeed:String?, newWindgust:String?,
+                 newRain8h: String?, newRainRate: String?) {
         Log.d("setValue", newTime)
         val timeFormatOffset = DateTimeFormatter
             .ofPattern("uuuu-MM-dd'T'HH:mm:ssXXXXX")
@@ -65,6 +70,22 @@ class PagerFragment : Fragment(R.layout.fragment_pager) {
         beaufort.visibility = if(newBeaufort==null) {ImageView.GONE}else{ImageView.VISIBLE}
         beaufort.text = newBeaufort
         beaufort.tooltipText = "Average $newWindspeed km/h\nGust $newWindgust km/h"
+        if(newRainRate == null) {
+            rain.visibility = ImageView.GONE
+        }else{
+            rain.visibility = ImageView.VISIBLE
+            val rate = newRainRate.toFloat()
+            if(rate <= 0f){            rain.setImageDrawable(activity?.getApplicationContext()
+                ?.let { getDrawable(it, R.drawable.norain_icon) })}
+            else if(rate< 1f){            rain.setImageDrawable(activity?.getApplicationContext()
+                ?.let { getDrawable(it, R.drawable.lightrain_icon) })}
+            else if(rate< 3f){            rain.setImageDrawable(activity?.getApplicationContext()
+                ?.let { getDrawable(it, R.drawable.rain_icon) })}
+            else {            rain.setImageDrawable(activity?.getApplicationContext()
+                ?.let { getDrawable(it, R.drawable.heavyrain_icon) })}
+        }
+        rain.tooltipText = "Rain rate $newRainRate mm/h\n$newRain8h mm in last 8 hours"
+
     }
 
     companion object {
@@ -78,6 +99,8 @@ class PagerFragment : Fragment(R.layout.fragment_pager) {
         private const val EXTRA_BEAUFORT = "beaufort"
         private const val EXTRA_WINDSPEED = "windspeed"
         private const val EXTRA_WINDGUST = "windgust"
+        private const val EXTRA_RAIN8H = "rain8h"
+        private const val EXTRA_RAINRATE = "rainrate"
 
         /***
          * create a new PagerFragment
@@ -95,6 +118,8 @@ class PagerFragment : Fragment(R.layout.fragment_pager) {
                     putString(EXTRA_BEAUFORT, item.beaufort)
                     putString(EXTRA_WINDSPEED, item.windspeed)
                     putString(EXTRA_WINDGUST, item.windgust)
+                    putString(EXTRA_RAIN8H, item.rain8h  )
+                    putString(EXTRA_RAINRATE, item.rainrate)
                 }
             }
         }
