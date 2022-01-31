@@ -24,6 +24,14 @@ import android.net.NetworkCapabilities
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 
+/***
+ * Show a series a pages for temperature and humidity data collected by Shelly H&T devices.
+ *
+ * Currently the source of this information is a URL that provides the data as JSON.
+ * The URL is a string resource with the name data_source.
+ * This information is retrieved on startup as well as on swipe to refresh.
+ * It is also refreshed automatically every minute (or five minutes when on a metered connection)
+ */
 class MainActivity : AppCompatActivity(R.layout.activity_main) {
 
     private val TAG = "MainActivityTask"
@@ -34,6 +42,26 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
     @RequiresApi(Build.VERSION_CODES.O)
     var updated = LocalDateTime.now()
 
+    /***
+     * Given a JSONArray and a mutable list of pager items, it updates the list of pager items.
+     *
+     * It adds new items automatically but currently does not remove any.
+     *
+     * The JSONArray should contain objects with the following attributes:
+     * (note the that some numerical info is present as floats while others are expected to be strings even if they represent a number!)
+     * name:            the name of the observation station (String)
+     * time:            the time in ISO 8601 format YYYY-mm-ddTHH:MM:SSXXX:XX, e.g. 2022-01-31T10:26:38+01:00 (String)
+     * temperature:     the temperature in degrees Celcius (Float)
+     * humidity:        the relative humidity (Float)
+     * The object might also contain the following String attributes:
+     * windrose:        the average wind direction in compass directions in the last five minutes (String) e.g. 'E', 'WNW',
+     * winddir:         the average wind direction in degrees in the last five minutes (String)
+     * beaufort:        the average wind speed on the Beaufort scale (String)
+     * windgust:        the maximum wind speed in km/h in the last five minutes (String)
+     * windspeed:       the average wind speed in km/h in the last five minutes (String)
+     * rain8h:          the amount of rain fallen in the last 8 hours in mm (String)
+     * rainRate:        the current rate of rainfall in mm/h (String)
+     */
     private fun updatePagerItems(response: JSONArray, pagerItems: MutableList<PagerItem> ): MutableList<PagerItem> {
         val newPagerItems: MutableList<PagerItem> = mutableListOf()
         for (i in 0 until response.length()) {
@@ -59,6 +87,11 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
     }
 
 
+    /***
+     * Create a JSONarray request to get the JSON from a URL using the volley package.
+     *
+     * Any response will updated the pagerAdapter in this activity while an error will produce a debug log message.
+     */
     @RequiresApi(Build.VERSION_CODES.O)
     private fun createRequest(errorTag: String): JsonArrayRequest {
         val jsonArrayRequest = JsonArrayRequest(
@@ -70,23 +103,34 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         return jsonArrayRequest
     }
 
+    /***
+     * Create an activity with a pager and swipe to refresh functionality.
+     * It also adds an overlay with left and right buttons because swiping sideways to get to a new
+     * page is not always intuitive.
+     */
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // initialize the main layout with and action/toolbar
         setContentView(R.layout.activity_main)
         setSupportActionBar(findViewById(R.id.thetoolbar))
 
+        // configure the swiperefreshlayout to queue an update request
         val swiperefreshlayout = (findViewById<SwipeRefreshLayout>(R.id.swiperefresh))
         swiperefreshlayout.setOnRefreshListener {
             SingletonRequestQueue.getInstance(this).addToRequestQueue(createRequest("Swipe refresh failed"))
             swiperefreshlayout.isRefreshing = false
         }
 
+        // initialize the pager items
         pagerAdapter = PagerAdapter(this)
         viewPager.adapter = pagerAdapter
         pagerItems = generatePagerItems()
         pagerAdapter.setItems(pagerItems)
 
+        // configure the buttons.
+        // unlike the swipe actions on the pager the buttons will wrap around
         imageButtonLeft.setOnClickListener(object : View.OnClickListener {
             override fun onClick(v: View?) {
                 var tab = viewPager.currentItem - 1
@@ -102,9 +146,9 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
             }
         })
 
+        // perform the initial data request
         SingletonRequestQueue.getInstance(this).addToRequestQueue(createRequest("Load data in onCreate failed"))
     }
-
 
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -113,6 +157,9 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         return true
     }
 
+    /***
+     * update the text of the refresh menu item to reflect the time since the last update.
+     */
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
         super.onPrepareOptionsMenu(menu)
@@ -125,6 +172,9 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         return true
     }
 
+    /***
+     * configure the refreesh menu item to queue a data refresh
+     */
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
@@ -136,10 +186,14 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         return super.onOptionsItemSelected(item)
     }
 
+    /***
+     * configure a broadcast receiver to act on the ACTION_TIME_TICK intents that are sent by the system every minute.
+     * If we are on a non-metered connection we queue an update request on every tick, otherwise just every 5 ticks.
+     * We assume that if *any* available network is non-metered the routing will take care of actually using the cheapest option.
+     */
     var ticks = 0
     val br: BroadcastReceiver = MyBroadcastReceiver()
     val filter = IntentFilter(Intent.ACTION_TIME_TICK)
-
 
     inner class MyBroadcastReceiver : BroadcastReceiver() {
         @RequiresApi(Build.VERSION_CODES.O)
