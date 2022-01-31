@@ -21,6 +21,8 @@ import kotlinx.android.synthetic.main.activity_main.*
 import org.json.JSONArray
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 
 class MainActivity : AppCompatActivity(R.layout.activity_main) {
 
@@ -28,6 +30,9 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
 
     private lateinit var pagerAdapter: PagerAdapter
     private var pagerItems: MutableList<PagerItem> = mutableListOf()
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    var updated = LocalDateTime.now()
 
     private fun updatePagerItems(response: JSONArray, pagerItems: MutableList<PagerItem> ): MutableList<PagerItem> {
         val newPagerItems: MutableList<PagerItem> = mutableListOf()
@@ -53,6 +58,18 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         return newPagerItems
     }
 
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun createRequest(errorTag: String): JsonArrayRequest {
+        val jsonArrayRequest = JsonArrayRequest(
+            Request.Method.GET, getString(R.string.datasource), null,
+            { response -> pagerAdapter.setItems(updatePagerItems(response, pagerItems)); updated = LocalDateTime.now()},
+            { error -> Log.d(errorTag, error.toString()) }
+        )
+        jsonArrayRequest.tag = TAG
+        return jsonArrayRequest
+    }
+
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,18 +78,9 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
 
         val swiperefreshlayout = (findViewById<SwipeRefreshLayout>(R.id.swiperefresh))
         swiperefreshlayout.setOnRefreshListener {
-            val jsonArrayRequest = JsonArrayRequest(
-                Request.Method.GET, getString(R.string.datasource), null,
-                { response -> pagerAdapter.setItems(updatePagerItems(response, pagerItems))},
-                { error -> Log.d("Swipe refresh", error.toString()) }
-            )
-            jsonArrayRequest.tag = TAG
-            SingletonRequestQueue.getInstance(this).addToRequestQueue(jsonArrayRequest)
+            SingletonRequestQueue.getInstance(this).addToRequestQueue(createRequest("Swipe refresh failed"))
             swiperefreshlayout.isRefreshing = false
         }
-
-        // we don't use the fragment manager
-        // val fm: FragmentManager = supportFragmentManager
 
         pagerAdapter = PagerAdapter(this)
         viewPager.adapter = pagerAdapter
@@ -94,14 +102,10 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
             }
         })
 
-        val jsonArrayRequest = JsonArrayRequest(
-            Request.Method.GET, getString(R.string.datasource), null,
-            { response -> pagerAdapter.setItems(updatePagerItems(response, pagerItems))},
-            { error -> Log.d("On create", error.toString())}
-        )
-        jsonArrayRequest.tag = TAG
-        SingletonRequestQueue.getInstance(this).addToRequestQueue(jsonArrayRequest)
+        SingletonRequestQueue.getInstance(this).addToRequestQueue(createRequest("Load data in onCreate failed"))
     }
+
+
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         val inflater: MenuInflater = menuInflater
@@ -109,16 +113,23 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         return true
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
+    override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
+        super.onPrepareOptionsMenu(menu)
+        val refresh = menu?.findItem(R.id.menu_refresh)
+        val now = LocalDateTime.now()
+        val minutes = updated.until(now, ChronoUnit.MINUTES)
+        val seconds = updated.until(now, ChronoUnit.SECONDS) % 60
+        val secs = String.format("%02d",seconds)
+        refresh?.title = "Refresh (updated $minutes:$secs min ago)"
+        return true
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.menu_refresh -> {
-                val jsonArrayRequest = JsonArrayRequest(
-                    Request.Method.GET, getString(R.string.datasource), null,
-                    { response -> pagerAdapter.setItems(updatePagerItems(response, pagerItems))},
-                    { error -> Log.d("Refresh menu item", error.toString())}
-                )
-                jsonArrayRequest.tag = TAG
-                SingletonRequestQueue.getInstance(this).addToRequestQueue(jsonArrayRequest)
+                SingletonRequestQueue.getInstance(this).addToRequestQueue(createRequest("Refresh from options menu failed"))
                 return true
             }
         }
@@ -131,11 +142,12 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
 
 
     inner class MyBroadcastReceiver : BroadcastReceiver() {
+        @RequiresApi(Build.VERSION_CODES.O)
         override fun onReceive(context: Context?, p1: Intent?) {
             Log.d("Broadcast", p1.toString())
             val connectivityManager =
                 context?.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-            var notMetered: Boolean = false
+            var notMetered = false
             connectivityManager.allNetworks.forEach { network ->
                 connectivityManager.getNetworkCapabilities(network).apply {
                     if (hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)) {
@@ -147,20 +159,16 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
             ticks++
             if(notMetered or (ticks%5 == 0)){
                 Log.d("Broadcast", "reloading data. ticks= "+ticks)
-                val jsonArrayRequest = JsonArrayRequest(
-                    Request.Method.GET, getString(R.string.datasource), null,
-                    { response -> pagerAdapter.setItems(updatePagerItems(response, pagerItems))},
-                    { error -> Log.d("Automatic reload failed", error.toString())}
-                )
-                jsonArrayRequest.tag = TAG
-                SingletonRequestQueue.getInstance(context).addToRequestQueue(jsonArrayRequest)
+                SingletonRequestQueue.getInstance(context).addToRequestQueue(createRequest("Automatic reloading failed"))
             }
         }
     }
 
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onResume() {
         super.onResume()
+        SingletonRequestQueue.getInstance(this).addToRequestQueue(createRequest("Reload on resume failed"))
         ticks = 0
         registerReceiver(br, filter)
     }

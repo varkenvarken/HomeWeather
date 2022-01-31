@@ -45,6 +45,7 @@ class PagerFragment : Fragment(R.layout.fragment_pager) {
                  newWindrose: String?, newBeaufort:String?, newWindspeed:String?, newWindgust:String?,
                  newRain8h: String?, newRainRate: String?) {
         Log.d("setValue", newTime)
+        val beaufortSteps = listOf<Float>(0.0f, 1.0f, 6.0f,12f,20f,29f,39f,50f,62f,75f,89f,103f,117f)
         val timeFormatOffset = DateTimeFormatter
             .ofPattern("uuuu-MM-dd'T'HH:mm:ssXXXXX")
         val timeFormatSimple = DateTimeFormatter
@@ -69,7 +70,9 @@ class PagerFragment : Fragment(R.layout.fragment_pager) {
         }
         beaufort.visibility = if(newBeaufort==null) {ImageView.GONE}else{ImageView.VISIBLE}
         beaufort.text = newBeaufort
-        beaufort.tooltipText = "Average $newWindspeed km/h\nGust $newWindgust km/h"
+        val beaufortGustIndex = beaufortSteps.binarySearch(newWindgust?.toFloat())
+        val beaufortGust = if(beaufortGustIndex >= 0){beaufortGustIndex + 1}else{ -beaufortGustIndex -2}
+        beaufort.tooltipText = "Average $newWindspeed km/h\nGust $newWindgust km/h ($beaufortGust bft)"
         if(newRainRate == null) {
             rain.visibility = ImageView.GONE
         }else{
